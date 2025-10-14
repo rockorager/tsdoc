@@ -1,0 +1,16 @@
+{
+  "name": "tsdoc",
+  "version": "0.1.0",
+  "module": "src/main.ts",
+  "type": "module",
+  "bin": {
+    "tsdoc": "./src/main.ts"
+  },
+  "scripts": {
+    "start": "bun run src/main.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.9.3"
+  }
+}
