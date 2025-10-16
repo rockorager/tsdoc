@@ -23,11 +23,11 @@ Run `bd quickstart` for full tutorial.
 This is a TypeScript CLI tool built with Bun that parses and displays documentation for TypeScript symbols using the TypeScript Compiler API. The codebase consists of:
 
 - **src/main.ts**: Single-file implementation containing:
-  - CLI argument parsing and help text
-  - TypeScript lib file resolution
-  - AST traversal and symbol lookup with dot notation support
-  - Documentation extraction (JSDoc comments, type signatures, parameters)
-  - Formatted output display
+    - CLI argument parsing and help text
+    - TypeScript lib file resolution
+    - AST traversal and symbol lookup with dot notation support
+    - Documentation extraction (JSDoc comments, type signatures, parameters)
+    - Formatted output display
 
 ## Code Style
 
