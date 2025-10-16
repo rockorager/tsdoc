@@ -7,7 +7,7 @@ import * as fs from "fs";
 function printUsage() {
     console.log(`Usage: tsdoc [options] <symbol>
 
-Show documentation for TypeScript symbols from built-in types, Node.js APIs, and third-party packages.
+Show documentation for TypeScript symbols from built-in types, Node.js APIs, third-party packages, and local project files.
 
 Examples:
   tsdoc Array                  # Show Array interface with all members
@@ -15,6 +15,8 @@ Examples:
   tsdoc express                # List all exports from express package
   tsdoc express.Request        # Show express Request interface details
   tsdoc react.Component        # Show React Component class details
+  tsdoc mymodule               # List exports from local ./mymodule.ts
+  tsdoc mymodule.MyClass       # Show MyClass from local module
 
 Options:
   -h, --help        Show this help message
@@ -41,6 +43,50 @@ function main() {
     }
 }
 
+function tryFindLocalModule(moduleName: string): string | null {
+    const cwd = process.cwd();
+    const extensions = [".ts", ".tsx", ".d.ts", ".js", ".jsx"];
+
+    // Try direct path with extensions
+    for (const ext of extensions) {
+        const filePath = path.join(cwd, `${moduleName}${ext}`);
+        if (fs.existsSync(filePath)) {
+            return filePath;
+        }
+    }
+
+    // Try as directory with index file
+    const dirPath = path.join(cwd, moduleName);
+    if (fs.existsSync(dirPath) && fs.statSync(dirPath).isDirectory()) {
+        for (const ext of extensions) {
+            const indexPath = path.join(dirPath, `index${ext}`);
+            if (fs.existsSync(indexPath)) {
+                return indexPath;
+            }
+        }
+    }
+
+    // Try in src directory
+    for (const ext of extensions) {
+        const srcPath = path.join(cwd, "src", `${moduleName}${ext}`);
+        if (fs.existsSync(srcPath)) {
+            return srcPath;
+        }
+    }
+
+    const srcDirPath = path.join(cwd, "src", moduleName);
+    if (fs.existsSync(srcDirPath) && fs.statSync(srcDirPath).isDirectory()) {
+        for (const ext of extensions) {
+            const indexPath = path.join(srcDirPath, `index${ext}`);
+            if (fs.existsSync(indexPath)) {
+                return indexPath;
+            }
+        }
+    }
+
+    return null;
+}
+
 function tryFindPackage(packageName: string): boolean {
     try {
         require.resolve(`${packageName}/package.json`);
@@ -63,8 +109,15 @@ function findAndPrintDocs(symbolPath: string) {
     let libFiles: string[];
     let searchParts = parts;
     let isPackageQuery = false;
+    let isLocalModule = false;
 
-    if (tryFindPackage(rootModule)) {
+    const localModulePath = tryFindLocalModule(rootModule);
+    if (localModulePath) {
+        libFiles = getLibFiles(undefined, localModulePath);
+        searchParts = parts.slice(1);
+        isPackageQuery = searchParts.length === 0;
+        isLocalModule = true;
+    } else if (tryFindPackage(rootModule)) {
         libFiles = getLibFiles(rootModule);
         searchParts = parts.slice(1);
         isPackageQuery = searchParts.length === 0;
@@ -84,7 +137,7 @@ function findAndPrintDocs(symbolPath: string) {
     );
 
     for (const sourceFile of program.getSourceFiles()) {
-        if (sourceFile.isDeclarationFile) {
+        if (sourceFile.isDeclarationFile || isLocalModule) {
             if (
                 isPackageQuery &&
                 packageTypeFiles.some((f) => sourceFile.fileName === f)
@@ -178,7 +231,7 @@ function resolvePackageTypes(packageName: string): string[] {
     return files;
 }
 
-function getLibFiles(packageName?: string): string[] {
+function getLibFiles(packageName?: string, localModulePath?: string): string[] {
     try {
         const tsPath = require.resolve("typescript");
         const libDir = path.dirname(tsPath);
@@ -195,6 +248,10 @@ function getLibFiles(packageName?: string): string[] {
         if (packageName) {
             const packageFiles = resolvePackageTypes(packageName);
             files.push(...packageFiles);
+        }
+
+        if (localModulePath) {
+            files.push(localModulePath);
         }
 
         return files;
